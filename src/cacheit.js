@@ -1,50 +1,38 @@
 var fs = require('fs'),
     Em = require('events').EventEmitter,
     util = require('util'),
-    sys = require('sys');
+    mime = require('./mime').mimes,
+    CFile = require('./cachetypes/cfile').CFile;
 
-var Co = function(type, key){
-    this.type = type;
-    this.key = key;
-    this.created = (new Date).getTime();
-    this.size = 0;
-    this.lastRead = 0;
-    this.data = [];
+var CacheIt = function(){
+    this.maxSize = 0;
+    this.defMaxAge = 0;
+    this.cacheSize = 0;
+    this.cache = {};
 };
-util.inherits(Co, Em);
 
-Co.prototype.stream = function(ws){
-    for(var i = 0; i < this.data.length; i += 1) {
-        ws.write(this.data[i]);   
-    }
-    var l = this.data.length;
-    var i = 0;
-    var w = true;
-    ws.on('drain',function(){
-        w = true;
-    });
-    
-    while(i < l){
-        if(w){
-            if(ws.write(this.data[i])){
-                i += 1;
-            }
-            else{
-                w = false;
-            }
+CacheIt.prototype.mime = function(p){
+    var m = p.match(/([^\/^\.]+)(\.[^\.]+)$/);
+    var mimeType = 'text/plain';
+    var ext = '.txt';
+    if(m){
+        if(typeof mime[m[2]] !== 'undefined'){
+            ext = m[2];
+            mimeType = mime[m[2]];
         }
     }
-    ws.end();
-}
-
-
-var DataStore = function(){
-  this.cache = {};
+    return {
+        mime: mimeType,
+        ext: ext
+    };
 };
 
-DataStore.prototype.file = function(p, cb){
+CacheIt.prototype.file = function(p, cb){
     if(typeof this.cache[p] === 'undefined'){
-        var co = new Co('file', p);
+        var co = new CFile(p);
+        var m = this.mime(p);
+        co.mime = m.mime;
+        co.extension = m.ext;
         var rs = fs.createReadStream(p);
         rs.on('error',function(err){
             cb(err)
@@ -59,8 +47,12 @@ DataStore.prototype.file = function(p, cb){
         
         rs.on('close',function(){
             co.size += s;
+            t.cacheSize += s;
             co.lastRead = (new Date).getTime();
-            t.cache[p] = co;
+            if(t.cacheSize + s < t.maxSize && t.maxSize > 0){
+                co.cached = true;
+                t.cache[p] = co;
+            }
             cb(false, co);
         });
     }
@@ -69,10 +61,11 @@ DataStore.prototype.file = function(p, cb){
     }
 }
 
-DataStore.prototype.remove = function(key, cb){
+CacheIt.prototype.remove = function(key, cb){
     delete this.cache[key];
     if(typeof cb === 'function'){
         cb(false,{deleted:key});
     }
 };
-exports.DataStore = DataStore;
+
+exports.CacheIt = CacheIt;
