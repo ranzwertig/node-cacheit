@@ -7,7 +7,7 @@ http.createServer(function (req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
     if(req.url != '/favicon.ico'){
         console.time('file request');
-        ds.file('./tests/testdata_small.json',function(err, cacheElement){
+        ds.file('./tests/testdata.txt',function(err, cacheElement){
             if(err){
                 console.log(err);
                 res.end();

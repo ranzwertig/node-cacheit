@@ -49,7 +49,7 @@ CacheIt.prototype.file = function(p, cb){
             co.size += s;
             t.cacheSize += s;
             co.lastRead = (new Date).getTime();
-            if(t.cacheSize + s < t.maxSize && t.maxSize > 0){
+            if(t.cacheSize + s < t.maxSize || t.maxSize === 0){
                 co.cached = true;
                 t.cache[p] = co;
             }
