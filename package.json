@@ -10,7 +10,7 @@
 , "bugs" : { "web" : "https://github.com/ranzwertig/node-cacheit/issues" }
 , "licenses" :
   [ { "type" : "MIT"
-    , "url" : "https://github.com/ranzwertig/"
+    , "url" : "https://raw.github.com/ranzwertig/node-cacheit/master/README.md"
     }
   ]
 }
