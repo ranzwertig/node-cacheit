@@ -4,9 +4,12 @@ var fs = require('fs'),
     mime = require('./mime').mimes,
     CFile = require('./cachetypes/cfile').CFile;
 
-var CacheIt = function(){
-    this.maxSize = 0;
-    this.defMaxAge = 0;
+var CacheIt = function(settings){
+    if(typeof settings === 'undefined'){
+        var settings = {};
+    }
+    this.maxSize = settings.maxCacheSize || 0;
+    this.maxAge = settings.maxCacheAge || 0;
     this.cacheSize = 0;
     this.cache = {};
 };
@@ -27,7 +30,36 @@ CacheIt.prototype.mime = function(p){
     };
 };
 
-CacheIt.prototype.file = function(p, cb){
+CacheIt.prototype.readFile = function(p, cb){
+    if(typeof this.cache[p] === 'undefined'){
+        var co = new CFile(p);
+        var m = this.mime(p);
+        co.mime = m.mime;
+        co.extension = m.ext;
+        var t = this;
+        fs.readFile(p, function(err, data){
+            if(!err){
+                co.data = data;
+                co.size = data.length;
+                co.lastRead = (new Date).getTime();
+                if(t.cacheSize + data.length < t.maxSize || t.maxSize === 0){
+                    co.cached = true;
+                    t.cache[p] = co;
+                    t.cacheSize += data.length;
+                    cb(false, data);
+                }
+            }
+            else{
+                cb(err,false);
+            }
+        });
+    }
+    else{
+        cb(false, this.cache[p].data);
+    }
+};
+
+CacheIt.prototype.fileStream = function(p, cb){
     if(typeof this.cache[p] === 'undefined'){
         var co = new CFile(p);
         var m = this.mime(p);
@@ -47,11 +79,11 @@ CacheIt.prototype.file = function(p, cb){
         
         rs.on('close',function(){
             co.size += s;
-            t.cacheSize += s;
             co.lastRead = (new Date).getTime();
             if(t.cacheSize + s < t.maxSize || t.maxSize === 0){
                 co.cached = true;
                 t.cache[p] = co;
+                t.cacheSize += s;
             }
             cb(false, co);
         });
@@ -59,13 +91,18 @@ CacheIt.prototype.file = function(p, cb){
     else{
         cb(false, this.cache[p]);
     }
-}
+};
 
 CacheIt.prototype.remove = function(key, cb){
     delete this.cache[key];
     if(typeof cb === 'function'){
         cb(false,{deleted:key});
     }
+};
+
+CacheIt.prototype.flush = function(){
+    this.cacheSize = 0;
+    this.cache = {};
 };
 
 exports.CacheIt = CacheIt;
