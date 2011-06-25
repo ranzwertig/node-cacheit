@@ -8,30 +8,21 @@ var fs = require('fs'),
 var http = require('http');
 http.createServer(function (req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
+
     if(req.url == '/httppump'){
 
-        console.time('httpPump request');
-        ds.httpPump('./tests/testdata.txt', res, function(err,data){
+        ds.httpPump('./tests/testdata.txt',res,function(err,d){
             res.end();
-            console.timeEnd('httpPump request');
         });
         
     }
-    if(req.url == '/readfile'){
-        console.time('readFile request');
+    else if(req.url == '/readfile'){
+
         ds.readFile('./tests/testdata.txt', function(err,data){
             res.write(data);
             res.end();
-            console.timeEnd('readFile request');
         });
-    }
-    if(req.url == '/httpsend'){
-        console.time('httpSend request');
-        ds.readFile('./tests/testdata.txt', function(err,data){
-            res.write(data);
-            res.end();
-            console.timeEnd('httpSend request');
-        });
+        
     }
     else{
         res.end();
