@@ -10,22 +10,15 @@ var CFile = function(key){
     this.mime = false;
 };
 
-CFile.prototype.pump = function(res, cb){
+CFile.prototype.httpPump = function(res, cb){
     var err = false;
-    if(this.data.length > 0){
-        for(var i = 0; i < this.data.length; i += 1){
-            res.write(this.data[i]);
-        }
+    for(var i = 0; i < this.data.length; i += 1){
+        res.write(this.data[i]);
     }
-    else{
-        err = {
-            message: 'Empty data for key: '+this.key
-        };
-    }
-    cb(err,res);
+    cb(err,this,res);
 };
 
-CFile.prototype.send = function(res, cb){
+CFile.prototype.httpSend = function(res, cb){
     res.writeHead(200,{
         'Content-Type': this.mime,
         'Cache-Control': 'max-age',

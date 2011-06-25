@@ -59,15 +59,16 @@ CacheIt.prototype.readFile = function(p, cb){
     }
 };
 
-CacheIt.prototype.fileStream = function(p, cb){
+CacheIt.prototype.httpPump = function(p, res, cb){
     if(typeof this.cache[p] === 'undefined'){
         var co = new CFile(p);
         var m = this.mime(p);
         co.mime = m.mime;
         co.extension = m.ext;
         var rs = fs.createReadStream(p);
+        
         rs.on('error',function(err){
-            cb(err)
+            cb(err,false,res);
         });
         
         var s = 0;
@@ -75,9 +76,19 @@ CacheIt.prototype.fileStream = function(p, cb){
         rs.on('data',function(d){
             s += d.length;
             co.data.push(d);
+            var flushed = res.write(d.toString());
+            if(!flushed){
+                rs.pause();
+                console.log('pause');
+            }
         });
         
-        rs.on('close',function(){
+        res.on('drain', function() {
+            rs.resume();
+            console.log('resume');
+        });
+        
+        rs.on('end',function(){
             co.size += s;
             co.lastRead = (new Date).getTime();
             if(t.cacheSize + s < t.maxSize || t.maxSize === 0){
@@ -85,11 +96,12 @@ CacheIt.prototype.fileStream = function(p, cb){
                 t.cache[p] = co;
                 t.cacheSize += s;
             }
-            cb(false, co);
+            cb(false, co, res);
         });
     }
     else{
-        cb(false, this.cache[p]);
+        var da = this.cache[p];
+        da.httpPump(res, cb);
     }
 };
 
